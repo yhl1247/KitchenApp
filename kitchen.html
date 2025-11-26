@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>智慧冰箱 V3 (獨立版)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #F3F4F6; -webkit-tap-highlight-color: transparent; }
+        .tab-active { color: #10B981; border-bottom: 2px solid #10B981; }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* IOS Optimization */
+        input, button, select, textarea { font-size: 16px; } /* Prevent zoom on focus */
+        .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+    </style>
+</head>
+<body class="bg-gray-100 h-screen flex justify-center overflow-hidden">
+
+    <!-- App Container -->
+    <div class="w-full max-w-md bg-white h-full shadow-2xl flex flex-col relative">
+        
+        <!-- Header -->
+        <header class="bg-white px-6 py-4 border-b border-gray-100 flex justify-between items-center z-10 shrink-0 shadow-sm">
+            <div>
+                <h1 class="text-xl font-bold text-gray-800">智慧冰箱 <span class="text-emerald-500">V3</span></h1>
+                <p class="text-xs text-gray-400">本機儲存版</p>
+            </div>
+            <div onclick="resetData()" class="h-8 w-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 cursor-pointer" title="重置資料">
+                <i class="fas fa-redo-alt text-xs"></i>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <div class="flex border-b border-gray-200 bg-white shrink-0">
+            <button onclick="switchTab('inventory')" id="tab-inventory" class="flex-1 py-3 text-sm font-medium text-center tab-active transition-colors">
+                <i class="fas fa-box-open mr-1"></i> 冰箱庫存
+            </button>
+            <button onclick="switchTab('recipes')" id="tab-recipes" class="flex-1 py-3 text-sm font-medium text-center text-gray-500 hover:text-gray-700 transition-colors">
+                <i class="fas fa-utensils mr-1"></i> 料理顧問
+            </button>
+        </div>
+
+        <!-- Scrollable Content Area -->
+        <main class="flex-1 overflow-y-auto bg-gray-50 p-4 relative pb-24 safe-bottom">
+            
+            <!-- VIEW: INVENTORY -->
+            <div id="view-inventory" class="fade-in space-y-4">
+                <!-- Add Item Form -->
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                    <h3 class="font-bold text-gray-700 mb-3 text-sm flex items-center gap-2">
+                        <span class="bg-emerald-100 text-emerald-600 w-6 h-6 rounded-full flex items-center justify-center text-xs"><i class="fas fa-plus"></i></span>
+                        採購補貨
+                    </h3>
+                    <form id="add-form" class="space-y-3">
+                        <div class="flex gap-2">
+                            <input type="text" id="input-name" placeholder="食材名 (例: 牛排)" class="flex-1 bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block p-2.5" required>
+                            <input type="date" id="input-expiry" class="w-1/3 bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block p-2.5" required>
+                        </div>
+                        <div class="flex gap-2">
+                            <input type="number" id="input-qty" placeholder="數量" step="0.5" class="w-1/2 bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block p-2.5" required>
+                            <input type="text" id="input-unit" placeholder="單位 (例: 片)" class="w-1/2 bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block p-2.5" required>
+                        </div>
+                        <button type="submit" class="w-full text-white bg-gray-800 hover:bg-black font-medium rounded-lg text-sm px-5 py-3 text-center transition-colors shadow-md active:scale-95 transform">
+                            放入冰箱
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Inventory List -->
+                <div id="inventory-list" class="space-y-3 pb-8">
+                    <div class="text-center py-10 text-gray-400 text-sm">
+                        <i class="fas fa-spinner fa-spin mb-2 text-2xl"></i><br>
+                        讀取中...
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: RECIPES -->
+            <div id="view-recipes" class="hidden fade-in space-y-4 pb-8">
+                <!-- Add Recipe Button Area -->
+                <div class="flex justify-between items-center bg-white p-3 rounded-xl shadow-sm border border-gray-100">
+                    <div class="text-sm text-gray-600">
+                        <i class="fas fa-lightbulb text-yellow-400 mr-1"></i> 想煮特別的？
+                    </div>
+                    <button onclick="openRecipeModal()" class="text-xs bg-emerald-100 text-emerald-600 px-3 py-1.5 rounded-full font-bold hover:bg-emerald-200 transition">
+                        <i class="fas fa-plus"></i> 新增私房食譜
+                    </button>
+                </div>
+
+                <div id="recipe-list" class="space-y-4">
+                    <!-- Dynamic Recipes -->
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Toast Notification -->
+        <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-5 py-3 rounded-full shadow-lg text-sm opacity-0 transition-opacity duration-300 pointer-events-none z-50 whitespace-nowrap">
+            Action Completed
+        </div>
+        
+        <!-- Add Recipe Modal -->
+        <div id="recipe-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-end sm:items-center justify-center z-40 backdrop-blur-sm">
+            <div class="bg-white w-full max-w-md h-[85vh] sm:h-auto sm:rounded-xl rounded-t-2xl flex flex-col shadow-2xl animate-slide-up">
+                <div class="p-4 border-b border-gray-100 flex justify-between items-center">
+                    <h3 class="font-bold text-gray-800">新增私房食譜</h3>
+                    <button onclick="closeRecipeModal()" class="text-gray-400 hover:text-gray-600 p-2"><i class="fas fa-times text-xl"></i></button>
+                </div>
+                
+                <div class="p-4 overflow-y-auto flex-1 space-y-4">
+                    <div>
+                        <label class="block mb-1 text-sm font-medium text-gray-700">食譜名稱</label>
+                        <input type="text" id="new-recipe-name" placeholder="例如: 乾煎鮭魚" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg w-full p-3">
+                    </div>
+                    <div>
+                        <label class="block mb-1 text-sm font-medium text-gray-700">所需食材</label>
+                        <p class="text-xs text-gray-500 mb-2">從下方冰箱清單選擇，或手動輸入</p>
+                        
+                        <div id="recipe-ing-inputs" class="space-y-2">
+                            <div class="flex gap-2 ing-row">
+                                <input type="text" placeholder="食材名" class="r-ing-name flex-1 bg-gray-50 border border-gray-300 text-sm rounded-lg p-2">
+                                <input type="number" placeholder="量" class="r-ing-qty w-20 bg-gray-50 border border-gray-300 text-sm rounded-lg p-2">
+                            </div>
+                        </div>
+                        <button onclick="addIngRow()" class="mt-2 text-xs text-emerald-600 font-medium hover:underline p-2">+ 增加一行</button>
+
+                        <div class="mt-4">
+                            <p class="text-xs font-bold text-gray-400 mb-2">快速帶入冰箱現有：</p>
+                            <div id="quick-add-chips" class="flex flex-wrap gap-2">
+                                <!-- Chips injected by JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-4 border-t border-gray-100 bg-gray-50 rounded-b-xl safe-bottom">
+                    <button onclick="saveCustomRecipe()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-xl shadow-md transition-all active:scale-95">
+                        儲存食譜
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Confirm Cook Modal -->
+        <div id="cook-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4 backdrop-blur-sm">
+            <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm transform transition-all scale-100">
+                <div class="text-center mb-4">
+                    <div class="bg-emerald-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 text-emerald-500 text-2xl animate-bounce">
+                        <i class="fas fa-check"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-800" id="cook-modal-title">完成料理？</h3>
+                    <p class="text-sm text-gray-500 mt-1">這將會扣除相關食材庫存</p>
+                </div>
+                <div id="cook-modal-preview" class="bg-gray-50 p-3 rounded-lg text-sm text-gray-600 mb-6 space-y-1 max-h-40 overflow-y-auto">
+                    <!-- Changes preview -->
+                </div>
+                <div class="flex justify-center gap-3">
+                    <button id="cook-cancel" class="flex-1 px-4 py-3 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition font-medium">等等</button>
+                    <button id="cook-confirm" class="flex-1 px-4 py-3 text-white bg-emerald-500 rounded-lg hover:bg-emerald-600 shadow-md transition font-medium">開動！</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Logic: LocalStorage Version -->
+    <script>
+        // --- Data Management (LocalStorage) ---
+        const DB_KEY_INV = 'soren_kitchen_inventory_v3';
+        const DB_KEY_RECIPES = 'soren_kitchen_recipes_v3';
+
+        let inventoryData = [];
+        let customRecipes = [];
+
+        // Built-in Default Recipes
+        const defaultRecipes = [
+            { id: 'def1', name: '香煎鯖魚', ingredients: [{ name: '鯖魚', qty: 1, unit: '片' }], desc: '經典主菜', isCustom: false },
+            { id: 'def2', name: '蒜炒空心菜', ingredients: [{ name: '空心菜', qty: 1, unit: '把' }], desc: '清脆爽口', isCustom: false },
+            { id: 'def3', name: '蔥爆豬里肌', ingredients: [{ name: '豬里肌', qty: 1, unit: '盒' }], desc: '下飯首選', isCustom: false },
+            { id: 'def4', name: '嫩煎雞胸肉', ingredients: [{ name: '雞胸肉', qty: 1, unit: '塊' }], desc: '健身必備', isCustom: false },
+            { id: 'def5', name: '清炒小白菜', ingredients: [{ name: '小白菜', qty: 1, unit: '把' }], desc: '簡單營養', isCustom: false },
+            { id: 'def6', name: '蛤蜊絲瓜', ingredients: [{ name: '絲瓜', qty: 0.5, unit: '條' }], desc: '鮮甜多汁', isCustom: false },
+            { id: 'def7', name: '滑蛋豬里肌', ingredients: [{ name: '豬里肌', qty: 0.5, unit: '盒' }, { name: '蛋', qty: 2, unit: '顆' }], desc: '親子最愛', isCustom: false },
+            { id: 'def8', name: '鯖魚定食', ingredients: [{ name: '鯖魚', qty: 1, unit: '片' }, { name: '小白菜', qty: 1, unit: '把' }, { name: '蛋', qty: 1, unit: '顆' }], desc: '營養均衡', isCustom: false }
+        ];
+
+        // Load Data
+        function loadData() {
+            const savedInv = localStorage.getItem(DB_KEY_INV);
+            const savedRec = localStorage.getItem(DB_KEY_RECIPES);
+
+            inventoryData = savedInv ? JSON.parse(savedInv) : [];
+            customRecipes = savedRec ? JSON.parse(savedRec) : [];
+            
+            // Render everything
+            renderInventory();
+            renderRecipes();
+        }
+
+        // Save Data
+        function saveInventory() {
+            localStorage.setItem(DB_KEY_INV, JSON.stringify(inventoryData));
+            renderInventory();
+            renderRecipes(); // Updates cookable status
+        }
+
+        function saveRecipes() {
+            localStorage.setItem(DB_KEY_RECIPES, JSON.stringify(customRecipes));
+            renderRecipes();
+        }
+
+        // --- Inventory Actions ---
+        function addToInventory(name, qty, unit, expiry) {
+            const newItem = {
+                id: 'inv_' + Date.now(),
+                name: name.trim(),
+                qty: parseFloat(qty),
+                unit: unit.trim(),
+                expiry: expiry,
+                created_at: new Date().toISOString()
+            };
+            inventoryData.push(newItem);
+            saveInventory();
+            showToast(`已放入：${name}`);
+            
+            // Reset Form (keep date)
+            document.getElementById('input-name').value = '';
+            document.getElementById('input-qty').value = '';
+            document.getElementById('input-unit').value = '';
+        }
+
+        function updateQuantity(id, change, name) {
+            const itemIndex = inventoryData.findIndex(i => i.id === id);
+            if (itemIndex === -1) return;
+
+            const item = inventoryData[itemIndex];
+            const newQty = item.qty + change;
+
+            if (newQty <= 0) {
+                if(confirm(`確定要吃光/移除「${name}」嗎？`)) {
+                    inventoryData.splice(itemIndex, 1);
+                    saveInventory();
+                    showToast("已移除食材");
+                }
+            } else {
+                item.qty = newQty;
+                saveInventory();
+            }
+        }
+
+        // --- Recipe Matching Logic ---
+        function getAllRecipes() {
+            return [...customRecipes, ...defaultRecipes];
+        }
+
+        function matchRecipes() {
+            const allRecipes = getAllRecipes();
+            return allRecipes.map(recipe => {
+                const missing = [];
+                const found = [];
+                
+                recipe.ingredients.forEach(req => {
+                    // Simple string matching
+                    const match = inventoryData.find(item => 
+                        item.name.includes(req.name) || req.name.includes(item.name)
+                    );
+
+                    if (match && match.qty >= req.qty) {
+                        found.push({ ...req, dbId: match.id, currentQty: match.qty, unit: match.unit });
+                    } else {
+                        missing.push(req);
+                    }
+                });
+
+                return { 
+                    ...recipe, 
+                    isCookable: missing.length === 0, 
+                    missing, 
+                    found 
+                };
+            }).sort((a, b) => {
+                // Sort Priority: Cookable -> Custom -> Default
+                if (a.isCookable !== b.isCookable) return a.isCookable ? -1 : 1;
+                if (a.isCustom !== b.isCustom) return a.isCustom ? -1 : 1;
+                return 0;
+            });
+        }
+
+        function cookRecipe(recipe) {
+            const modal = document.getElementById('cook-modal');
+            const preview = document.getElementById('cook-modal-preview');
+            const confirmBtn = document.getElementById('cook-confirm');
+            const cancelBtn = document.getElementById('cook-cancel');
+
+            // Build preview
+            let html = `<p class="font-bold mb-2">將扣除：</p>`;
+            recipe.found.forEach(ing => {
+                html += `<div class="flex justify-between border-b border-gray-200 py-1"><span>${ing.name}</span> <span class="text-red-500 font-mono">-${ing.qty}${ing.unit}</span></div>`;
+            });
+            preview.innerHTML = html;
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+
+            // Handle Confirm
+            confirmBtn.onclick = () => {
+                recipe.found.forEach(ing => {
+                    const item = inventoryData.find(i => i.id === ing.dbId);
+                    if (item) {
+                        item.qty -= ing.qty;
+                        if (item.qty <= 0) {
+                            // Remove item
+                            const idx = inventoryData.indexOf(item);
+                            if (idx > -1) inventoryData.splice(idx, 1);
+                        }
+                    }
+                });
+                saveInventory(); // This triggers re-render
+                showToast(`完成！享受你的${recipe.name}吧 🥘`);
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            };
+
+            cancelBtn.onclick = () => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            };
+        }
+
+        // --- Custom Recipe Logic ---
+        function saveCustomRecipe() {
+            const name = document.getElementById('new-recipe-name').value;
+            if(!name) return showToast("請輸入食譜名稱", true);
+
+            const rows = document.querySelectorAll('.ing-row');
+            const ingredients = [];
+            rows.forEach(row => {
+                const iName = row.querySelector('.r-ing-name').value;
+                const iQty = row.querySelector('.r-ing-qty').value;
+                if(iName && iQty) {
+                    ingredients.push({ name: iName, qty: parseFloat(iQty) });
+                }
+            });
+
+            if(ingredients.length === 0) return showToast("至少需要一樣食材", true);
+
+            const newRecipe = {
+                id: 'cust_' + Date.now(),
+                name, 
+                ingredients, 
+                desc: '私房料理', 
+                isCustom: true,
+                created_at: new Date().toISOString()
+            };
+
+            customRecipes.unshift(newRecipe); // Add to top
+            saveRecipes();
+            showToast("食譜已儲存！");
+            closeRecipeModal();
+            // Reset form
+            document.getElementById('new-recipe-name').value = '';
+            document.getElementById('recipe-ing-inputs').innerHTML = `
+                <div class="flex gap-2 ing-row">
+                    <input type="text" placeholder="食材名" class="r-ing-name flex-1 bg-gray-50 border border-gray-300 text-sm rounded-lg p-2">
+                    <input type="number" placeholder="量" class="r-ing-qty w-20 bg-gray-50 border border-gray-300 text-sm rounded-lg p-2">
+                </div>`;
+        }
+
+        // --- UI Rendering ---
+        function renderInventory() {
+            const listEl = document.getElementById('inventory-list');
+            listEl.innerHTML = '';
+            
+            if(inventoryData.length === 0) {
+                 listEl.innerHTML = `<div class="text-center py-10"><p class="text-gray-400">冰箱空空如也 🌬️</p></div>`;
+                 return;
+            }
+
+            const sorted = [...inventoryData].sort((a,b) => new Date(a.expiry) - new Date(b.expiry));
+            
+            sorted.forEach(item => {
+                const days = Math.ceil((new Date(item.expiry) - new Date()) / (86400000));
+                let statusHtml = '';
+                let bgClass = 'bg-white border-gray-100';
+
+                if (days < 0) {
+                    statusHtml = '<span class="text-red-500 font-bold text-xs bg-red-100 px-2 py-0.5 rounded-full">過期</span>';
+                    bgClass = 'bg-red-50 border-red-200';
+                } else if (days <= 3) {
+                    statusHtml = `<span class="text-orange-500 font-bold text-xs bg-orange-100 px-2 py-0.5 rounded-full">剩 ${days} 天</span>`;
+                    bgClass = 'bg-orange-50 border-orange-200';
+                } else {
+                    statusHtml = `<span class="text-gray-400 text-xs">${days} 天後</span>`;
+                }
+
+                const el = document.createElement('div');
+                el.className = `${bgClass} p-4 rounded-xl shadow-sm border flex justify-between items-center transition-all hover:shadow-md`;
+                el.innerHTML = `
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                            <h4 class="font-bold text-gray-800 text-lg">${item.name}</h4>
+                            ${statusHtml}
+                        </div>
+                        <div class="text-sm text-gray-600">庫存: <span class="font-mono font-bold text-emerald-600 text-lg">${item.qty}</span> ${item.unit}</div>
+                    </div>
+                    <div class="flex gap-3 items-center">
+                         <button onclick="updateQuantity('${item.id}', -1, '${item.name}')" class="w-10 h-10 rounded-full bg-gray-200 active:bg-gray-300 text-gray-600 flex justify-center items-center shadow-sm transition"><i class="fas fa-minus"></i></button>
+                         <button onclick="updateQuantity('${item.id}', 1, '${item.name}')" class="w-10 h-10 rounded-full bg-emerald-100 active:bg-emerald-200 text-emerald-600 flex justify-center items-center shadow-sm transition"><i class="fas fa-plus"></i></button>
+                    </div>
+                `;
+                listEl.appendChild(el);
+            });
+        }
+
+        function renderRecipes() {
+            const listEl = document.getElementById('recipe-list');
+            listEl.innerHTML = '';
+            
+            const matches = matchRecipes();
+            
+            matches.forEach(recipe => {
+                const el = document.createElement('div');
+                const isAvailable = recipe.isCookable;
+                const typeBadge = recipe.isCustom ? `<span class="text-[10px] bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded ml-2 font-medium">私房</span>` : ``;
+                
+                // Button Logic
+                let btnHtml;
+                if (isAvailable) {
+                    btnHtml = `<button onclick="initCook('${recipe.id}')" class="mt-4 w-full bg-emerald-500 active:bg-emerald-600 text-white py-3 rounded-lg text-sm font-bold shadow-md transform active:scale-95 transition">開動 (扣庫存)</button>`;
+                } else {
+                    const missingText = recipe.missing.map(m=>m.name).join('、');
+                    btnHtml = `<button disabled class="mt-4 w-full bg-gray-100 text-gray-400 py-3 rounded-lg text-sm cursor-not-allowed">缺: ${missingText}</button>`;
+                }
+
+                const opacityClass = isAvailable ? 'opacity-100' : 'opacity-70';
+                const borderClass = isAvailable ? 'border-emerald-500' : 'border-gray-300';
+                const bgClass = isAvailable ? 'bg-white' : 'bg-gray-50';
+
+                el.className = `p-5 rounded-xl border-l-4 shadow-sm ${bgClass} ${borderClass} ${opacityClass} transition-all`;
+                
+                const ingredientsTags = recipe.ingredients.map(i => 
+                    `<span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-md mr-1 mb-1 inline-block border border-gray-200">${i.name}</span>`
+                ).join('');
+
+                el.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <h4 class="font-bold text-gray-800 text-lg flex items-center">${recipe.name} ${typeBadge}</h4>
+                        ${isAvailable ? '<i class="fas fa-check-circle text-emerald-500 text-xl"></i>' : ''}
+                    </div>
+                    <p class="text-xs text-gray-500 mb-3">${recipe.desc}</p>
+                    <div class="mb-1">${ingredientsTags}</div>
+                    ${btnHtml}
+                `;
+                listEl.appendChild(el);
+            });
+        }
+
+        function renderQuickAddChips() {
+            const chips = document.getElementById('quick-add-chips');
+            chips.innerHTML = '';
+            // Unique names only
+            const uniqueNames = [...new Set(inventoryData.map(i => i.name))];
+            
+            uniqueNames.forEach(name => {
+                const btn = document.createElement('button');
+                btn.className = 'bg-gray-100 active:bg-emerald-100 text-gray-600 active:text-emerald-600 text-xs px-3 py-1.5 rounded-full transition border border-gray-200';
+                btn.textContent = name;
+                btn.onclick = () => window.addIngRow(name);
+                chips.appendChild(btn);
+            });
+        }
+
+        // --- Setup & Helpers ---
+        window.switchTab = (t) => {
+            document.querySelectorAll('main > div').forEach(e => e.classList.add('hidden'));
+            document.getElementById(`view-${t}`).classList.remove('hidden');
+            
+            // Tab styling
+            document.getElementById('tab-inventory').className = `flex-1 py-3 text-sm font-medium text-center transition-colors ${t==='inventory' ? 'tab-active' : 'text-gray-500'}`;
+            document.getElementById('tab-recipes').className = `flex-1 py-3 text-sm font-medium text-center transition-colors ${t==='recipes' ? 'tab-active' : 'text-gray-500'}`;
+        };
+
+        window.openRecipeModal = () => {
+             renderQuickAddChips();
+             document.getElementById('recipe-modal').classList.remove('hidden');
+             document.getElementById('recipe-modal').classList.add('flex');
+        };
+        window.closeRecipeModal = () => {
+             document.getElementById('recipe-modal').classList.add('hidden');
+             document.getElementById('recipe-modal').classList.remove('flex');
+        };
+        
+        window.addIngRow = (prefillName = '') => {
+            const div = document.createElement('div');
+            div.className = 'flex gap-2 ing-row mb-2';
+            div.innerHTML = `
+                <input type="text" value="${prefillName}" placeholder="食材名" class="r-ing-name flex-1 bg-gray-50 border border-gray-300 text-sm rounded-lg p-2">
+                <input type="number" value="1" placeholder="量" class="r-ing-qty w-20 bg-gray-50 border border-gray-300 text-sm rounded-lg p-2">
+                <button type="button" onclick="this.parentElement.remove()" class="text-gray-400 p-2"><i class="fas fa-times"></i></button>
+            `;
+            document.getElementById('recipe-ing-inputs').appendChild(div);
+        };
+
+        window.initCook = (rid) => {
+            const recipes = matchRecipes();
+            const r = recipes.find(x => x.id === rid);
+            if(r) cookRecipe(r);
+        };
+
+        window.resetData = () => {
+            if(confirm('確定要重置所有資料嗎？(清空冰箱與私房食譜)')) {
+                localStorage.removeItem(DB_KEY_INV);
+                localStorage.removeItem(DB_KEY_RECIPES);
+                location.reload();
+            }
+        };
+
+        const showToast = (msg, err=false) => {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.remove('opacity-0');
+            setTimeout(() => t.classList.add('opacity-0'), 2000);
+        };
+
+        // Event Listeners
+        document.getElementById('add-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const n = document.getElementById('input-name').value;
+            const q = document.getElementById('input-qty').value;
+            const u = document.getElementById('input-unit').value;
+            const ex = document.getElementById('input-expiry').value;
+            addToInventory(n, q, u, ex);
+        });
+
+        // Set default date
+        document.getElementById('input-expiry').valueAsDate = new Date();
+
+        // Start
+        loadData();
+
+    </script>
+</body>
+</html>
